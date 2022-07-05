@@ -92,8 +92,11 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
       sim$burnMap[getValues(sim$burnMap) == 0] <- NA ## make a map of flammable pixels with value 0
       sim$burnMap[!is.na(getValues(sim$burnMap)) & getValues(sim$burnMap) == 1] <- 0
 
-      # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "historicFires", "loadFires", eventPriority = 5.13)
+      ## schedule future event(s)
+      # sim <- scheduleConditionalEvent(sim, "TRUE", "historicFires", "loadFires",
+      #                                 eventPriority = 5.13,
+      #                                 minEventTime = min(P(sim)$staticFireYears), maxEventTime = max(P(sim)$staticFireYears))
+      sim <- scheduleEvent(sim, min(P(sim)$staticFireYears), "historicFires", "loadFires", eventPriority = 5.13)
     },
     loadFires = {
       # ! ----- EDIT BELOW ----- ! #
@@ -120,9 +123,13 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
       setnames(tempDT, c("initialPixels"), c("igLoc"))
       sim$burnSummary <- rbind(sim$burnSummary, tempDT)
 
-      sim <- scheduleConditionalEvent(sim, "time(sim) %in% P(sim)$historicFireYears", "historicFires", "loadFires",
-                                      eventPriority = 5.13,
-                                      minEventTime = start(sim), maxEventTime = max(P(sim)$historicFireYears))
+      ## schedule future event(s)
+      # sim <- scheduleConditionalEvent(sim, "TRUE", "historicFires", "loadFires",
+      #                                 eventPriority = 5.13,
+      #                                 minEventTime = min(P(sim)$staticFireYears), maxEventTime = max(P(sim)$staticFireYears))
+      if ((time(sim) + 1) %in% P(sim)$staticFireYears) {
+        sim <- scheduleEvent(sim, time(sim) + 1, "historicFires", "loadFires", eventPriority = 5.13)
+      }
 
       # ! ----- STOP EDITING ----- ! #
     },
