@@ -53,8 +53,40 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
-      ### check for more detailed object dependencies:
-      ### (use `checkObject` or similar)
+      cacheTags <- c(currentModule(sim), "function:.inputObjects")
+      dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+
+      historicFires <- Cache(
+        prepInputs,
+        url = extractURL("fireMaps"),
+        destinationPath = dPath,
+        studyArea = sim$studyArea,
+        useSAcrs = TRUE
+      ) %>%
+        st_cast("MULTIPOLYGON")
+
+      yearsWithData <- unique(historicFires[["YEAR"]])
+      noFireYears <- P(sim)$staticFireYears[!(P(sim)$staticFireYears %in% yearsWithData)]
+
+      if (length(noFireYears)) {
+        warning("No historic fires within study area for years: ", noFireYears)
+      }
+
+      historicFireRasters <- lapply(P(sim)$staticFireYears, function(year) {
+        subst <- historicFires[historicFires$YEAR == year, ]
+        subst$ID <- as.integer(factor(subst$FIRE_ID))
+        fires <- if (nrow(subst) > 0) {
+          suppressWarnings({
+            fasterize::fasterize(subst, sim$flammableRTM, field = "ID", background = NA_integer_)
+          })
+        } else {
+          raster::raster(sim$flammableRTM)
+        }
+        raster::mask(fires, sim$flammableRTM)
+      })
+
+      sim$fireMaps <- raster::stack(historicFireRasters)
+      names(sim$fireMaps) <- paste0("X", P(sim)$staticFireYears)
 
       sim$burnMap <- setValues(raster(sim$flammableRTM), getValues(sim$flammableRTM))
       sim$burnMap[getValues(sim$burnMap) == 0] <- NA ## make a map of flammable pixels with value 0
@@ -113,40 +145,6 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
 
   if (!suppliedElsewhere("flammableRTM", sim)) {
     stop("flammableRTM must be supplied. Create it using e.g., `LandR::defineFlammable()`.")
-  }
-
-  if (!suppliedElsewhere("fireMaps", sim)) {
-    historicFires <- Cache(
-      prepInputs,
-      url = extractURL("fireMaps"),
-      destinationPath = dPath,
-      studyArea = sim$studyArea,
-      useSAcrs = TRUE
-    ) %>%
-      st_cast("MULTIPOLYGON")
-
-    yearsWithData <- unique(historicFires[["YEAR"]])
-    noFireYears <- P(sim)$staticFireYears[!(P(sim)$staticFireYears %in% yearsWithData)]
-
-    if (length(noFireYears)) {
-      warning("No historic fires within study area for years: ", noFireYears)
-    }
-
-    historicFireRasters <- lapply(P(sim)$staticFireYears, function(year) {
-      subst <- historicFires[historicFires$YEAR == year, ]
-      subst$ID <- as.integer(factor(subst$FIRE_ID))
-      fires <- if (nrow(subst) > 0) {
-        suppressWarnings({
-          fasterize::fasterize(subst, sim$flammableRTM, field = "ID", background = NA_integer_)
-        })
-      } else {
-        raster::raster(sim$flammableRTM)
-      }
-      raster::mask(fires, sim$flammableRTM)
-    })
-
-    sim$fireMaps <- raster::stack(historicFireRasters)
-    names(sim$fireMaps) <- paste0("X", fireMaps)
   }
 
   # ! ----- STOP EDITING ----- ! #
