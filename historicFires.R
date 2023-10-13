@@ -9,40 +9,40 @@ defineModule(sim, list(
     person("Ian", "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = "ctb")
   ),
   childModules = character(0),
-  version = list(historicFires = "0.0.1"),
+  version = list(historicFires = "1.0.0"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.md", "historicFires.Rmd"), ## same file
-  reqdPkgs = list("fasterize", "raster", "reproducible", "sf",
-                  "PredictiveEcology/SpaDES.core@development (>= 1.0.10.9008)"),
+  reqdPkgs = list("reproducible (>= 2.0.2)", "sf", "terra",
+                  "PredictiveEcology/SpaDES.core@development (>= 2.0.2)"),
   parameters = rbind(
-    defineParameter(".useCache", "logical", FALSE, NA, NA,
-                    "Should caching of events or module be used?"),
     defineParameter("staticFireYears", "integer", 2011:2020, NA, NA,
-                    "simulation years for which static fire maps will be used.")
+                    "simulation years for which static fire maps will be used."),
+    defineParameter(".useCache", "logical", FALSE, NA, NA,
+                    "Should caching of events or module be used?")
   ),
   inputObjects = bindrows(
-    expectsInput("fireMaps", "RasterStack",
+    expectsInput("fireMaps", "SpatRaster",
                  desc = paste("Annual layers of fire perimeters (e.g., historic or presimulated).",
                               "Layer names correspond to simulation years for which that layer will be used."),
                  sourceURL = "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_poly/current_version/NFDB_poly.zip"),
-    expectsInput("flammableRTM", "RasterLayer",
+    expectsInput("flammableRTM", "SpatRaster",
                  desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1.",
                  sourceURL = NA),
-    expectsInput("studyArea", "SpatialPolygonsDataFrame",
+    expectsInput("studyArea", "sf",
                  desc = paste("Polygon to use as the study area. Must be provided by the user."),
                  sourceURL = NA)
   ),
   outputObjects = bindrows(
     createsOutput("burnDT", "data.table", desc = "data.table with pixel IDs of most recent burn."),
-    createsOutput("burnMap", "RasterLayer", desc = "A raster of cumulative burns"),
+    createsOutput("burnMap", "SpatRaster", desc = "A raster of cumulative burns"),
     createsOutput("burnSummary", "data.table", desc = "Describes details of all burned pixels."),
-    createsOutput("fireMaps", "RasterStack",
+    createsOutput("fireMaps", "SpatRaster",
                   desc = paste("Annual layers of fire perimeters (e.g., historic or presimulated).",
                                "Layer names correspond to simulation years for which that layer will be used.")),
-    createsOutput("rstAnnualBurnID", "RasterLayer", desc = "annual raster whose values distinguish individual fires"),
-    createsOutput("rstCurrentBurn", "RasterLayer", desc = "A binary raster with 1 values representing burned pixels.")
+    createsOutput("rstAnnualBurnID", "SpatRaster", desc = "annual raster whose values distinguish individual fires"),
+    createsOutput("rstCurrentBurn", "SpatRaster", desc = "A binary raster with 1 values representing burned pixels.")
   )
 ))
 
@@ -60,9 +60,9 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
         prepInputs,
         url = extractURL("fireMaps"),
         destinationPath = dPath,
-        studyArea = sim$studyArea,
+        to = sim$studyArea,
         useSAcrs = TRUE
-      ) %>%
+      ) |>
         st_cast("MULTIPOLYGON")
 
       yearsWithData <- unique(historicFires[["YEAR"]])
@@ -77,20 +77,20 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
         subst$ID <- as.integer(factor(subst$FIRE_ID))
         fires <- if (nrow(subst) > 0) {
           suppressWarnings({
-            fasterize::fasterize(subst, sim$flammableRTM, field = "ID", background = NA_integer_)
+            rasterize(subst, sim$flammableRTM, field = "ID", background = NA_integer_)
           })
         } else {
-          raster::raster(sim$flammableRTM)
+          rast(sim$flammableRTM)
         }
-        raster::mask(fires, sim$flammableRTM)
+        mask(fires, sim$flammableRTM)
       })
 
-      sim$fireMaps <- raster::stack(historicFireRasters)
+      sim$fireMaps <- rast(historicFireRasters)
       names(sim$fireMaps) <- paste0("X", P(sim)$staticFireYears)
 
-      sim$burnMap <- setValues(raster(sim$flammableRTM), getValues(sim$flammableRTM))
-      sim$burnMap[getValues(sim$burnMap) == 0] <- NA ## make a map of flammable pixels with value 0
-      sim$burnMap[!is.na(getValues(sim$burnMap)) & getValues(sim$burnMap) == 1] <- 0
+      sim$burnMap <- setValues(rast(sim$flammableRTM), as.vector(values(sim$flammableRTM)))
+      sim$burnMap[as.vector(values(sim$burnMap)) == 0] <- NA ## make a map of flammable pixels with value 0
+      sim$burnMap[!is.na(as.vector(values(sim$burnMap))) & as.vector(values(sim$burnMap)) == 1] <- 0
 
       ## schedule future event(s)
       # sim <- scheduleConditionalEvent(sim, "TRUE", "historicFires", "loadFires",
