@@ -54,7 +54,7 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
     eventType,
     init = {
       cacheTags <- c(currentModule(sim), "function:.inputObjects")
-      dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+      dPath <- asPath(inputPath(sim), 1)
 
       historicFires <- Cache(
         prepInputs,
@@ -141,7 +141,7 @@ doEvent.historicFires = function(sim, eventTime, eventType) {
 
 .inputObjects <- function(sim) {
   cacheTags <- c(currentModule(sim), "function:.inputObjects")
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   # ! ----- EDIT BELOW ----- ! #
