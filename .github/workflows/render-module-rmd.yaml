@@ -1,11 +1,11 @@
 on:
   pull_request:
     branches:
-      - master
+      - main
       - development
   push:
     branches:
-      - master
+      - main
       - development
     paths:
       - .github/workflows/render-module-rmd.yaml
@@ -17,49 +17,46 @@ name: Render module Rmd
 jobs:
   render:
     name: Render module Rmd
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     env:
       RSPM: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest"
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: r-lib/actions/setup-r@v1
+      - uses: PredictiveEcology/actions/install-spatial-deps@v0.2
 
-      - uses: r-lib/actions/setup-pandoc@v1
-
-      - name: Install GDAL and other dependencies
+      - name: Install other dependencies
         run: |
           sudo apt-get install -y \
             libcurl4-openssl-dev \
-            libgdal-dev \
-            libgeos-dev \
             libgit2-dev \
             libglpk-dev \
             libmagick++-dev \
-            libproj-dev \
-            libudunits2-dev \
             libxml2-dev \
             python3-gdal
 
-      - name: Install remotes, knitr, rmarkdown
-        run: |
-          install.packages("remotes")
-          remotes::install_cran("rmarkdown")
-          remotes::install_cran("knitr")
-        shell: Rscript {0}
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          Ncpus: 2
 
-      - name: Install SpaDES
-        run: |
-          install.packages("SpaDES", dependencies = TRUE)
-        shell: Rscript {0}
+      - uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Install module package dependencies
+      - uses: PredictiveEcology/actions/install-Require@v0.2
+        with:
+          GitTag: 'development'
+
+      - uses: PredictiveEcology/actions/install-SpaDES@v0.2
+
+      - uses: PredictiveEcology/actions/install-Rmd-pkgs@v0.2
+
+      - name: Install module package and other dependencies
         run: |
           pkgs <- SpaDES.core::packages(modules = "historicFires", paths = "..")
-          Require::Require(pkgs)
+          Require::Require(pkgs[[1]], require = FALSE)
         shell: Rscript {0}
 
       - name: Render module Rmd
