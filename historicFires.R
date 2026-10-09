@@ -9,7 +9,7 @@ defineModule(sim, list(
     person("Ian", "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = "ctb")
   ),
   childModules = character(0),
-  version = list(historicFires = "1.0.0"),
+  version = list(historicFires = "1.0.0.9000"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),

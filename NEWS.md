@@ -1,3 +1,5 @@
+# historicFires (development version)
+
 # historicFires 1.0.0
 
 historicFires now uses the terra and sf packages instead of raster and sp, so it works with current SpaDES modules and projects. It reads its data from the project's input folder, following current module practice.
