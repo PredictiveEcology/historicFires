@@ -14,7 +14,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.md", "historicFires.Rmd"), ## same file
-  reqdPkgs = list("reproducible (>= 2.0.2)", "sf", "terra",
+  reqdPkgs = list("httr2", "reproducible (>= 2.0.2)", "sf", "terra",
                   "PredictiveEcology/SpaDES.core@development (>= 2.0.2)"),
   parameters = rbind(
     defineParameter("staticFireYears", "integer", 2011:2020, NA, NA,
