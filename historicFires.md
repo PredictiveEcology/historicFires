@@ -20,10 +20,10 @@ Creates raster layers of historic fires, which can be used with a wildfire simul
 Provide a summary of user-visible parameters.
 
 
-|paramName       |paramClass |default      |min |max |paramDesc                                                 |
-|:---------------|:----------|:------------|:---|:---|:---------------------------------------------------------|
-|staticFireYears |integer    |2011, 20.... |NA  |NA  |simulation years for which static fire maps will be used. |
-|.useCache       |logical    |FALSE        |NA  |NA  |Should caching of events or module be used?               |
+|paramName       |paramClass |default      |min |max |paramDesc                                                 |cacheKey |
+|:---------------|:----------|:------------|:---|:---|:---------------------------------------------------------|:--------|
+|staticFireYears |integer    |2011, 20.... |NA  |NA  |simulation years for which static fire maps will be used. |TRUE     |
+|.useCache       |logical    |FALSE        |NA  |NA  |Should caching of events or module be used?               |TRUE     |
 
 # Events
 
